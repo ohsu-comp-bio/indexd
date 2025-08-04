@@ -1,14 +1,22 @@
 
-**Problem:**
+# RBAC in Indexd
+
+## **Problem:**
 As an indexd or DRS user, when I list objects, I only expect to see items that belong to projects I have access to.
 
-**Solution:**
-Assuming a Bearer token is included on the request, I expect indexd to query arborist, extract the projects I have access to and add those as an "authz" filter when querying the database.  A feature flag should control this query injection, the flag should default to FALSE, as this will improve chances of getting a PR approved.  All current unit tests should pass.  Additional unit tests should confirm behavior.
+## **Solution:**
 
-**Alternatives:**
+Assuming a Bearer token is included on the request, I expect indexd to query arborist, extract the projects I have access to and add those as an "authz" filter when querying the database.  If a token is not present, I expect that index will still query Arborist to retrieve default permissions.  These calls should be cached for performance.
+
+A feature flag should control this query injection, the flag should default to FALSE, as this will improve chances of getting a PR approved.  All current unit tests should pass.  Additional unit tests should confirm behavior.
+
+## **Alternatives:**
 We could have a RBAC aware proxy front end indexd - however will add complexity and processing overhead
 
-**Context:**
+## **Context:**
+
+The indexd service is used to manage and serve metadata about data objects, such as files in a data repository. It currently does not enforce any access control on the objects it serves, which means that any user can see all objects regardless of their permissions.
+
 Main [auth code](https://github.com/uc-cdis/indexd/blob/fb21317f2bc72ad9b0ea143fe9388122f59d10f4/indexd/auth/drivers/alchemy.py#L37-L36) has two methods `auth` and `authz`. The [indexd.authorize](https://github.com/uc-cdis/indexd/blob/0859c639f99a7cbce0a0cd15564ed9847814a5ff/indexd/auth/__init__.py#L10) method checks if Basic auth header is present auth is called otherwise authz is called.   The revproxy gateway injects this header [here](https://github.com/uc-cdis/gen3-helm/blob/9ccd25c3e4c40f87f750883802ece5866cdfbc24/helm/revproxy/gen3.nginx.conf/indexd-service.conf#L41-L53) This reliance on Basic auth is concerning and it's rationale is undocumented.  It appears that it is not used for either create or read based on [client API](https://github.com/uc-cdis/indexclient/blob/master/indexclient/client.py)
 
 **Approach:**
@@ -28,13 +36,6 @@ and inject resources (projects) into query.
 
 ---
 # reviewers guide
-
-## Setup Instructions
-* See [docs/local_dev_environment.md](docs/local_dev_environment.md) for details on setting up a local development environment.
-
-## Testing
-* See [pytest](https://github.com/uc-cdis/indexd?tab=readme-ov-file#testing)
-  * Suggest doing this on master first branch to ensure all tests pass
 
 ## Code Review
 * Main changes were made to:
